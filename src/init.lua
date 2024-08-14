@@ -34,7 +34,7 @@ function module.Info(
 	})
 end
 function module.new(
-	obj: Instance | {} | Model,
+	obj: string | Instance | {} | Model,
 	info: TweenInfo,
 	action: {},
 	repeatID: number?
@@ -66,6 +66,18 @@ function module.Fast(obj: Instance | {} | Model, info: TweenInfo, action: {}): (
 		new:Wait()
 		new:Destroy()
 	end)
+end
+
+function module.Wait(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
+	local new = module.new(obj, info, action)
+	new:Wait()
+	new:Destroy()
+end
+
+function module.WaitTable(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
+	local new = module.new(obj, info, action)
+	new:WaitTable()
+	new:Destroy()
 end
 
 return module

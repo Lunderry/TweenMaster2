@@ -70,12 +70,29 @@ function module.model(model: Model, info: TweenInfo, action: {}, id: number): Tw
 	return module.create(cframeValue, info, { Value = cf })
 end
 --
+
+local function VerifyAction(inst: any, action: { [string]: any }): {}
+	local n = {}
+
+	for i, v in action do
+		local success = pcall(function()
+			return inst[i]
+		end)
+		if success then
+			n[i] = v
+		end
+	end
+	return n
+end
+--
 function module.check(obj: Instance, info: TweenInfo, action: {}, id: number): Tween
 	if obj:IsA("Model") then
-		return module.model(obj, info, action, id)
+		return module.model(obj, info, VerifyAction(obj, action), id)
 	else
-		return module.create(obj, info, action)
+		return module.create(obj, info, VerifyAction(obj, action))
 	end
 end
 --
+
 return module
+
