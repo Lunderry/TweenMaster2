@@ -49,6 +49,19 @@ function module.new(
 		newID = id
 	end
 
+	--if obj is string search the object
+	if type(obj) == "string" then
+		local result = {}
+		for match in (obj .. "."):gmatch("(.-)" .. "%.") do
+			table.insert(result, match)
+		end
+		obj = game
+		for _, v in result do
+			print(v)
+			obj = obj[v]
+		end
+	end
+
 	if type(obj) == "table" then
 		for _, v in obj do
 			TweenCreate[#TweenCreate + 1] = ManagerTweenMaster.check(v :: Instance, info, action, newID)
@@ -66,18 +79,6 @@ function module.Fast(obj: Instance | {} | Model, info: TweenInfo, action: {}): (
 		new:Wait()
 		new:Destroy()
 	end)
-end
-
-function module.Wait(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
-	local new = module.new(obj, info, action)
-	new:Wait()
-	new:Destroy()
-end
-
-function module.WaitTable(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
-	local new = module.new(obj, info, action)
-	new:WaitTable()
-	new:Destroy()
 end
 
 return module
