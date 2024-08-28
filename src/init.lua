@@ -51,15 +51,20 @@ function module.new(
 
 	--if obj is string search the object
 	if type(obj) == "string" then
-		local result = {}
+		local result: { string } = {}
 		for match in (obj .. "."):gmatch("(.-)" .. "%.") do
 			table.insert(result, match)
 		end
-		obj = game
+		local rp = game
 		for _, v in result do
-			print(v)
-			obj = obj[v]
+			if rp:FindFirstChild(v) then
+				rp = rp[v]
+				continue
+			end
+			warn(rp:GetFullName() .. " to " .. v .. " No exist.")
+			break
 		end
+		obj = rp
 	end
 
 	if type(obj) == "table" then
@@ -81,4 +86,9 @@ function module.Fast(obj: Instance | {} | Model, info: TweenInfo, action: {}): (
 	end)
 end
 
+function module.Wait(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
+	local new = module.new(obj, info, action)
+	new:Wait()
+	new:Destroy()
+end
 return module
