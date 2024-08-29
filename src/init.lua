@@ -44,12 +44,28 @@ function module.newClient(obj: Types.obj, info: Types.dataTween, action: Types.a
 		self.Object = ManagerTweenMaster.searchInstanceWithString(obj)
 	end
 
+	--put table
 	if type(self.Object) ~= "table" then
 		self.Object = { self.Object }
 	end
 
-	for _, v in self.Object do
-		table.insert(self.Tween, ManagerTweenMaster.Check(v :: Instance, self.Info, self.Action))
+	if self.Object[1] then
+		self.Object = ManagerTweenMaster.objectsGenerateUI(self.Object)
+	end
+
+	self.Action = ManagerTweenMaster.clearActions(self.Object, action)
+
+	for insId, instance in pairs(self.Object) do
+		local act = {}
+
+		for property, value in pairs(action) do
+			if type(value) == "table" then
+				act[property] = value[insId]
+			else
+				act[property] = value
+			end
+		end
+		table.insert(self.Tween, ManagerTweenMaster.Check(instance :: Instance, self.Info, act))
 	end
 
 	if id then
@@ -64,13 +80,25 @@ function module.newServer(obj: Types.obj, info: Types.dataTween, action: Types.a
 	self.ID = HttpService:GenerateGUID(false)
 	self.Object = obj
 	self.Info = info
-	self.Action = action
 
 	--if obj is string search the object
 	if type(obj) == "string" then
 		self.Object = ManagerTweenMaster.searchInstanceWithString(obj)
 	end
 
+	--put table
+	if type(self.Object) ~= "table" then
+		self.Object = { self.Object }
+	end
+
+	if self.Object[1] then
+		self.Object = ManagerTweenMaster.objectsGenerateUI(self.Object)
+	end
+
+	--execute the function to pass to client
+	self.Action = ManagerTweenMaster.clearActions(self.Object, action)
+
+	print(self.Object)
 	return setmetatable(self, CreateTweenServer)
 end
 

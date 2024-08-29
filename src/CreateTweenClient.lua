@@ -16,12 +16,13 @@ end
 
 function class:Wait(): ()
 	local count = 0
-	for _, v: TweenBase in pairs(self.Tween) do
+	for _, tween: TweenBase in pairs(self.Tween) do
 		task.defer(function()
-			v.Completed:Once(function()
-				count += 1
-			end)
-			v:Play()
+			tween:Play()
+			repeat
+				local playbackState = tween.Completed:Wait()
+			until playbackState == Enum.PlaybackState.Completed
+			count += 1
 		end)
 	end
 	repeat
@@ -39,16 +40,19 @@ end
 
 function class:Cancel(): ()
 	for _, v in pairs(self.Tween) do
-		task.defer( function()
+		task.defer(function()
 			v:Cancel()
 		end)
 	end
 end
 
 function class:WaitTable(): ()
-	for _, v: TweenBase in pairs(self.Tween) do
-		v:Play()
-		v.Completed:Wait()
+	for _, tween in self.Tween do
+		tween:Play()
+
+		repeat
+			local playbackState = tween.Completed:Wait()
+		until playbackState == Enum.PlaybackState.Completed
 	end
 end
 

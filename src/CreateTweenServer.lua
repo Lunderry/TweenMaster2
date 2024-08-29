@@ -61,10 +61,11 @@ function class:Cancel(plr: Player?): ()
 end
 
 function class:WaitTable(plr: Player?): ()
-	_notwait(self, plr, "WaitTable")
+	_wait(self, plr, "WaitTable")
 end
 
 function class:Destroy(): ()
+	_notwait(self, nil, "Destroy")
 	table.clear(self)
 end
 

@@ -15,6 +15,27 @@ module.DATANEUTRAL = {
 	0,
 } :: { any }
 --
+function module.clearActions(obj: { [string]: Instance }, action: Types.action): Types.action
+	for property, act in action do
+		if type(act) ~= "function" then
+			continue
+		end
+		action[property] = {}
+		for id, instance in pairs(obj) do
+			action[property][id] = act(instance)
+		end
+	end
+	return action
+end
+--
+function module.objectsGenerateUI(obj: { Instance }): { ["1"]: Instance, ["2"]: string }
+	local newTable = {}
+	for _, v in obj do
+		newTable[HttpService:GenerateGUID(false)] = v
+	end
+	return newTable
+end
+--
 function module.createTweenInfo(specs: { any }): TweenInfo
 	for i, v in module.DATANEUTRAL do
 		if specs[i] == nil then
@@ -46,10 +67,20 @@ end
 ---@param action any
 ---@return any
 function module.Model(model: Model, info: TweenInfo, action: Types.action): Tween
+	local cf: CFrame
+	for i, v in action do
+		if i == "CFrame" then
+			cf = v :: CFrame
+		end
+	end
+
 	local cframeValue: CFrameValue = model:FindFirstChild("_TweenModel")
 
-	if not cframeValue then
-		cframeValue = Instance.new("CFrameValue", script)
+	if cframeValue then
+		cframeValue.Value = model:GetPivot()
+		return TweenService:Create(cframeValue, info, { Value = cf })
+	else
+		cframeValue = Instance.new("CFrameValue", model)
 		cframeValue.Name = "_TweenModel"
 	end
 	cframeValue.Value = model:GetPivot()
@@ -63,13 +94,6 @@ function module.Model(model: Model, info: TweenInfo, action: Types.action): Twee
 	cframeValue.Destroying:Once(function()
 		getPropertyChangedSignal:Disconnect()
 	end)
-
-	local cf: CFrame
-	for i, v in action do
-		if i == "CFrame" then
-			cf = v :: CFrame
-		end
-	end
 
 	return TweenService:Create(cframeValue, info, { Value = cf })
 end
@@ -91,7 +115,7 @@ end
 --
 function module.Check(obj: Instance, info: TweenInfo, action: Types.action): Tween
 	if obj:IsA("Model") then
-		return module.Model(obj, info, verifyAction(obj, action))
+		return module.Model(obj, info, action)
 	else
 		return TweenService:Create(obj, info, verifyAction(obj, action))
 	end
