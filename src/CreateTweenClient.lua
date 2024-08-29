@@ -1,9 +1,9 @@
---!strict
+--!nonstrict
 local SaveTweenClient = require(script.Parent.SaveTweenClient)
 
 local Types = require(script.Parent.Types)
 
-local class = {} :: Types.TweenMaster
+local class = {} :: Types.ClientTweenMaster
 class.__index = class
 
 function class:Play(): ()
@@ -60,7 +60,7 @@ function class:Destroy(): ()
 	if self.ID then
 		SaveTweenClient[self.ID] = nil
 	end
-	for _, v in self.Object do
+	for _, v: any in self.Instances do
 		if v:IsA("Model") then
 			v["_TweenModel"]:Destroy()
 		end

@@ -1,5 +1,6 @@
---!strict
+--!nonstrict
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 --
 local ManagerTweenMaster = require(script.ManagerTweenMaster)
 local CreateTweenServer = require(script.CreateTweenServer)
@@ -18,44 +19,58 @@ function module.Info(
 	_reverses: boolean?,
 	_delayTime: number?
 ): Types.dataTween
-	local specs = { _time, _easingStyle, _easingDirection, _repeatCount, _reverses, _delayTime }
+	local specs: { [any]: any } = { _time, _easingStyle, _easingDirection, _repeatCount, _reverses, _delayTime }
 	for i, v in ManagerTweenMaster.DATANEUTRAL do
 		if specs[i] == nil then
 			specs[i] = v
 		end
 	end
 
-	return specs
+	return specs :: Types.dataTween
 end
 
-function module.newClient(obj: Types.obj, info: Types.dataTween, action: Types.action, id: string?): Types.TweenMaster
+---Only use in client.
+---@param instance string | Instance | {[number]: Instance}
+---@param info Types.dataTween
+---@param action Types.action
+---@param id string?
+---@return any
+function module.newClient(
+	instance: string | Instance | { [number]: Instance },
+	info: Types.dataTween,
+	action: Types.action,
+	id: string?
+): Types.ClientTweenMaster
 	if SaveTweenClient[id] then
 		return SaveTweenClient[id]
 	end
 	local self = {}
 	self.Tween = {}
-	self.Object = obj
+	self.Instances = nil
 	self.Info = if type(info) == "table" then ManagerTweenMaster.createTweenInfo(info) else info
 	self.Action = action
 	self.ID = id
 
 	--if obj is string search the object
-	if type(obj) == "string" then
-		self.Object = ManagerTweenMaster.searchInstanceWithString(obj)
+	if type(instance) == "string" then
+		instance = ManagerTweenMaster.searchInstanceWithString(instance :: string) :: Types._objCreate
 	end
 
 	--put table
-	if type(self.Object) ~= "table" then
-		self.Object = { self.Object }
+	if type(instance) ~= "table" then
+		instance = { instance :: Instance }
 	end
 
-	if self.Object[1] then
-		self.Object = ManagerTweenMaster.objectsGenerateUI(self.Object)
+	local objCreate = instance :: Types._objCreate
+	if objCreate[1] ~= nil then
+		self.Instances = ManagerTweenMaster.objectsGenerateUI(objCreate)
+	else
+		self.Instances = objCreate
 	end
 
-	self.Action = ManagerTweenMaster.clearActions(self.Object, action)
+	self.Action = ManagerTweenMaster.clearActions(self.Instances, action)
 
-	for insId, instance in pairs(self.Object) do
+	for insId, inst in pairs(self.Instances) do
 		local act = {}
 
 		for property, value in pairs(action) do
@@ -65,53 +80,70 @@ function module.newClient(obj: Types.obj, info: Types.dataTween, action: Types.a
 				act[property] = value
 			end
 		end
-		table.insert(self.Tween, ManagerTweenMaster.Check(instance :: Instance, self.Info, act))
+		table.insert(self.Tween, ManagerTweenMaster.Check(inst :: Instance, self.Info, act))
 	end
 
 	if id then
 		SaveTweenClient[id] = self
 	end
 
-	return setmetatable(self, CreateTweenClient)
+	return setmetatable(self, CreateTweenClient) :: Types.ClientTweenMaster
 end
 
-function module.newServer(obj: Types.obj, info: Types.dataTween, action: Types.action): Types.TweenMaster
+---All tween execute in client
+---@param instance string | Instance | {[number]: Instance}
+---@param info Types.dataTween
+---@param action Types.action
+---@return Types.ServerTweenMaster
+function module.newServer(
+	instance: string | Instance | { [number]: Instance },
+	info: Types.dataTween,
+	action: Types.action
+): Types.ServerTweenMaster
 	local self = {}
 	self.ID = HttpService:GenerateGUID(false)
-	self.Object = obj
+	self.Instances = instance
 	self.Info = info
 
 	--if obj is string search the object
-	if type(obj) == "string" then
-		self.Object = ManagerTweenMaster.searchInstanceWithString(obj)
+	if type(instance) == "string" then
+		instance = ManagerTweenMaster.searchInstanceWithString(instance :: string) :: Types._objCreate
 	end
 
 	--put table
-	if type(self.Object) ~= "table" then
-		self.Object = { self.Object }
+	if type(instance) ~= "table" then
+		instance = { instance }
 	end
 
-	if self.Object[1] then
-		self.Object = ManagerTweenMaster.objectsGenerateUI(self.Object)
+	local objCreate = instance :: Types._objCreate
+	if objCreate[1] ~= nil then
+		self.Instances = ManagerTweenMaster.objectsGenerateUI(objCreate)
+	else
+		self.Instances = objCreate
 	end
 
 	--execute the function to pass to client
-	self.Action = ManagerTweenMaster.clearActions(self.Object, action)
+	self.Action = ManagerTweenMaster.clearActions(self.Instances, action)
 
-	print(self.Object)
-	return setmetatable(self, CreateTweenServer)
+	return setmetatable(self, CreateTweenServer) :: Types.ServerTweenMaster
 end
 
-function module.Fast(obj: Types.obj, info: TweenInfo, action: Types.action): ()
-	local new = module.new(obj, info, action)
+function module.Fast(obj: Types._objCreate, info: Types.dataTween, action: Types.action): ()
+	local new = if RunService:IsClient()
+		then module.newClient(obj, info, action)
+		else module.newServer(obj, info, action)
+
 	task.defer(function()
 		new:Wait()
 		new:Destroy()
 	end)
 end
 
-function module.Wait(obj: Types.obj, info: TweenInfo, action: Types.action): ()
-	local new = module.new(obj, info, action)
+function module.Wait(obj: Types._objCreate, info: Types.dataTween, action: Types.action): ()
+	local new = if RunService:IsClient()
+		then module.newClient(obj, info, action)
+		else module.newServer(obj, info, action)
+
 	new:Wait()
 	new:Destroy()
 end

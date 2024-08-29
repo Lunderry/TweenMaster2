@@ -4,39 +4,46 @@ local TweenService = game:GetService("TweenService")
 --
 local Types = require(script.Parent.Types)
 
-local module = {}
+local module = {} :: Types.ManagerTweenMaster
 
 module.DATANEUTRAL = {
-	0,
-	Enum.EasingStyle.Linear,
-	Enum.EasingDirection.In,
-	0,
-	false,
-	0,
-} :: { any }
+	["1"] = 0,
+	["2"] = Enum.EasingStyle.Linear,
+	["3"] = Enum.EasingDirection.In,
+	["4"] = 0,
+	["5"] = false,
+	["6"] = 0,
+} :: Types.dataTween
 --
-function module.clearActions(obj: { [string]: Instance }, action: Types.action): Types.action
+---@param inst Types.idInstances
+---@param action Types.action
+---@return any
+function module.clearActions(inst: Types.idInstances, action: Types.action): Types.action
 	for property, act in action do
 		if type(act) ~= "function" then
 			continue
 		end
 		action[property] = {}
-		for id, instance in pairs(obj) do
+		for id, instance in pairs(inst) do
 			action[property][id] = act(instance)
 		end
 	end
 	return action
 end
---
-function module.objectsGenerateUI(obj: { Instance }): { ["1"]: Instance, ["2"]: string }
-	local newTable = {}
-	for _, v in obj do
+---@param inst Types._objCreate
+---@return Types.idInstances
+function module.objectsGenerateUI(inst: Types._objCreate): Types.idInstances
+	local newTable = {} :: Types.idInstances
+	for _, v in inst do
 		newTable[HttpService:GenerateGUID(false)] = v
 	end
-	return newTable
+	return newTable :: Types.idInstances
 end
 --
-function module.createTweenInfo(specs: { any }): TweenInfo
+
+---@param specs Types.dataTween
+---@return TweenInfo
+function module.createTweenInfo(specs: Types.dataTween): TweenInfo
 	for i, v in module.DATANEUTRAL do
 		if specs[i] == nil then
 			specs[i] = v
@@ -46,7 +53,10 @@ function module.createTweenInfo(specs: { any }): TweenInfo
 	return TweenInfo.new(table.unpack(specs) :: number) :: TweenInfo
 end
 --
-function module.searchInstanceWithString(str: string): Instance | nil
+
+---@param str string
+---@return nil
+function module.searchInstanceWithString(str: string): Types._objCreate | nil
 	local result: { string } = {}
 	for match in (str .. "."):gmatch("(.-)" .. "%.") do
 		table.insert(result, match)
@@ -60,11 +70,11 @@ function module.searchInstanceWithString(str: string): Instance | nil
 		warn(rp:GetFullName() .. " to " .. v .. " No exist.")
 		return nil
 	end
-	return rp
+	return { rp }
 end
 ---@param model Model
 ---@param info TweenInfo
----@param action any
+---@param action Types.action
 ---@return any
 function module.Model(model: Model, info: TweenInfo, action: Types.action): Tween
 	local cf: CFrame
@@ -74,11 +84,12 @@ function module.Model(model: Model, info: TweenInfo, action: Types.action): Twee
 		end
 	end
 
-	local cframeValue: CFrameValue = model:FindFirstChild("_TweenModel")
+	local cframeValue: CFrameValue
 
-	if cframeValue then
-		cframeValue.Value = model:GetPivot()
-		return TweenService:Create(cframeValue, info, { Value = cf })
+	local findFirstChildModel = model:FindFirstChild("_TweenModel") :: CFrameValue
+	if findFirstChildModel then
+		findFirstChildModel.Value = model:GetPivot()
+		return TweenService:Create(findFirstChildModel, info, { Value = cf })
 	else
 		cframeValue = Instance.new("CFrameValue", model)
 		cframeValue.Name = "_TweenModel"
@@ -99,12 +110,12 @@ function module.Model(model: Model, info: TweenInfo, action: Types.action): Twee
 end
 --
 
-local function verifyAction(inst: any, action: { [string]: any }): {}
+local function verifyAction(inst: Instance, action: Types.action): Types.action
 	local n = {}
 
 	for i, v in action do
 		local success = pcall(function()
-			return inst[i]
+			return (inst :: any)[i]
 		end)
 		if success then
 			n[i] = v
@@ -113,11 +124,15 @@ local function verifyAction(inst: any, action: { [string]: any }): {}
 	return n
 end
 --
-function module.Check(obj: Instance, info: TweenInfo, action: Types.action): Tween
-	if obj:IsA("Model") then
-		return module.Model(obj, info, action)
+---@param inst Instance
+---@param info TweenInfo
+---@param action Types.action
+---@return any
+function module.Check(inst: Instance, info: TweenInfo, action: Types.action): Tween
+	if inst:IsA("Model") then
+		return module.Model(inst, info, action)
 	else
-		return TweenService:Create(obj, info, verifyAction(obj, action))
+		return TweenService:Create(inst, info, verifyAction(inst, action))
 	end
 end
 --

@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 --
@@ -9,7 +9,7 @@ local Types = require(script.Parent.Types)
 local remoteFunction = Instance.new("RemoteFunction", ReplicatedStorage)
 remoteFunction.Name = "_SendTweenEvent"
 --
-local class = {} :: Types.TweenMaster
+local class = {} :: Types.ClientTweenMaster
 class.__index = class
 
 local function _notwait(self, plr: Player?, str: string): ()

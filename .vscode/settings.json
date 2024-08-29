@@ -1,5 +1,6 @@
 {
     "robloxLsp.diagnostics.disable": [
-        "deprecated"
+        "deprecated",
+        "undefined-doc-name"
     ]
 }
