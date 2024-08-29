@@ -1,6 +1,8 @@
 --!strict
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
+--
+local Types = require(script.Parent.Types)
 
 local module = {}
 
@@ -23,41 +25,43 @@ function module.createTweenInfo(specs: { any }): TweenInfo
 	return TweenInfo.new(table.unpack(specs) :: number) :: TweenInfo
 end
 --
-function module.create(obj: Instance | {} | Model, info: TweenInfo, action: {}): Tween
-	return TweenService:Create(obj, info, action)
+function module.searchInstanceWithString(str: string): Instance | nil
+	local result: { string } = {}
+	for match in (str .. "."):gmatch("(.-)" .. "%.") do
+		table.insert(result, match)
+	end
+	local rp = game
+	for _, v in result do
+		if rp:FindFirstChild(v) then
+			rp = rp[v]
+			continue
+		end
+		warn(rp:GetFullName() .. " to " .. v .. " No exist.")
+		return nil
+	end
+	return rp
 end
---
-local saveModel = {}
-function module.model(model: Model, info: TweenInfo, action: {}, id: number): Tween
-	local folder: any
-	if not script.Parent:FindFirstChild(id) then
-		folder = Instance.new("Folder", script.Parent)
-		folder.Name = id
-	else
-		folder = script.Parent[id]
-	end
+---@param model Model
+---@param info TweenInfo
+---@param action any
+---@return any
+function module.Model(model: Model, info: TweenInfo, action: Types.action): Tween
+	local cframeValue: CFrameValue = model:FindFirstChild("_TweenModel")
 
-	local cframeValue: CFrameValue
-
-	if saveModel[model] then
-		cframeValue = folder:FindFirstChild(saveModel[model])
-	else
-		local newID = HttpService:GenerateGUID()
-		cframeValue = Instance.new("CFrameValue", folder)
-		cframeValue.Name = newID
-		saveModel[model] = newID
+	if not cframeValue then
+		cframeValue = Instance.new("CFrameValue", script)
+		cframeValue.Name = "_TweenModel"
 	end
+	cframeValue.Value = model:GetPivot()
 
 	local getPropertyChangedSignal
 
-	cframeValue.Value = model:GetPivot()
 	getPropertyChangedSignal = cframeValue:GetPropertyChangedSignal("Value"):Connect(function()
 		model:PivotTo(cframeValue.Value)
 	end)
 
 	cframeValue.Destroying:Once(function()
 		getPropertyChangedSignal:Disconnect()
-		saveModel[model] = nil
 	end)
 
 	local cf: CFrame
@@ -67,11 +71,11 @@ function module.model(model: Model, info: TweenInfo, action: {}, id: number): Tw
 		end
 	end
 
-	return module.create(cframeValue, info, { Value = cf })
+	return TweenService:Create(cframeValue, info, { Value = cf })
 end
 --
 
-local function VerifyAction(inst: any, action: { [string]: any }): {}
+local function verifyAction(inst: any, action: { [string]: any }): {}
 	local n = {}
 
 	for i, v in action do
@@ -85,14 +89,13 @@ local function VerifyAction(inst: any, action: { [string]: any }): {}
 	return n
 end
 --
-function module.check(obj: Instance, info: TweenInfo, action: {}, id: number): Tween
+function module.Check(obj: Instance, info: TweenInfo, action: Types.action): Tween
 	if obj:IsA("Model") then
-		return module.model(obj, info, VerifyAction(obj, action), id)
+		return module.Model(obj, info, verifyAction(obj, action))
 	else
-		return module.create(obj, info, VerifyAction(obj, action))
+		return TweenService:Create(obj, info, verifyAction(obj, action))
 	end
 end
 --
 
 return module
-

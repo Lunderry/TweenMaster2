@@ -1,21 +1,15 @@
 --!strict
-export type dataTween = {
-	time: number?,
-	easingStyle: Enum.EasingStyle?,
-	easingDirection: Enum.EasingDirection?,
-	repeatCount: number?,
-	reverses: boolean?,
-	delayTime: number?,
-}
+local HttpService = game:GetService("HttpService")
 --
 local ManagerTweenMaster = require(script.ManagerTweenMaster)
-local CreateTween = require(script.CreateTween)
+local CreateTweenServer = require(script.CreateTweenServer)
+local CreateTweenClient = require(script.CreateTweenClient)
+local SaveTweenClient = require(script.SaveTweenClient)
+
+local Types = require(script.Types)
 --
 local module = {}
 --
-
-local id = 0
-
 function module.Info(
 	_time: number?,
 	_easingStyle: Enum.EasingStyle?,
@@ -23,62 +17,64 @@ function module.Info(
 	_repeatCount: number?,
 	_reverses: boolean?,
 	_delayTime: number?
-): TweenInfo
-	return ManagerTweenMaster.createTweenInfo({
-		_time,
-		_easingStyle,
-		_easingDirection,
-		_repeatCount,
-		_reverses,
-		_delayTime,
-	})
-end
-function module.new(
-	obj: string | Instance | {} | Model,
-	info: TweenInfo,
-	action: {},
-	repeatID: number?
-): (CreateTween.TweenMaster, number)
-	local TweenCreate: { Tween } = {}
-
-	local newID
-	if repeatID then
-		newID = repeatID
-	else
-		id += 1
-		newID = id
+): Types.dataTween
+	local specs = { _time, _easingStyle, _easingDirection, _repeatCount, _reverses, _delayTime }
+	for i, v in ManagerTweenMaster.DATANEUTRAL do
+		if specs[i] == nil then
+			specs[i] = v
+		end
 	end
+
+	return specs
+end
+
+function module.newClient(obj: Types.obj, info: Types.dataTween, action: Types.action, id: string?): Types.TweenMaster
+	if SaveTweenClient[id] then
+		return SaveTweenClient[id]
+	end
+	local self = {}
+	self.Tween = {}
+	self.Object = obj
+	self.Info = if type(info) == "table" then ManagerTweenMaster.createTweenInfo(info) else info
+	self.Action = action
+	self.ID = id
 
 	--if obj is string search the object
 	if type(obj) == "string" then
-		local result: { string } = {}
-		for match in (obj .. "."):gmatch("(.-)" .. "%.") do
-			table.insert(result, match)
-		end
-		local rp = game
-		for _, v in result do
-			if rp:FindFirstChild(v) then
-				rp = rp[v]
-				continue
-			end
-			warn(rp:GetFullName() .. " to " .. v .. " No exist.")
-			break
-		end
-		obj = rp
+		self.Object = ManagerTweenMaster.searchInstanceWithString(obj)
 	end
 
-	if type(obj) == "table" then
-		for _, v in obj do
-			TweenCreate[#TweenCreate + 1] = ManagerTweenMaster.check(v :: Instance, info, action, newID)
-		end
-	else
-		TweenCreate[#TweenCreate + 1] = ManagerTweenMaster.check(obj, info, action, newID)
+	if type(self.Object) ~= "table" then
+		self.Object = { self.Object }
 	end
 
-	return CreateTween(TweenCreate, id), newID
+	for _, v in self.Object do
+		table.insert(self.Tween, ManagerTweenMaster.Check(v :: Instance, self.Info, self.Action))
+	end
+
+	if id then
+		SaveTweenClient[id] = self
+	end
+
+	return setmetatable(self, CreateTweenClient)
 end
 
-function module.Fast(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
+function module.newServer(obj: Types.obj, info: Types.dataTween, action: Types.action): Types.TweenMaster
+	local self = {}
+	self.ID = HttpService:GenerateGUID(false)
+	self.Object = obj
+	self.Info = info
+	self.Action = action
+
+	--if obj is string search the object
+	if type(obj) == "string" then
+		self.Object = ManagerTweenMaster.searchInstanceWithString(obj)
+	end
+
+	return setmetatable(self, CreateTweenServer)
+end
+
+function module.Fast(obj: Types.obj, info: TweenInfo, action: Types.action): ()
 	local new = module.new(obj, info, action)
 	task.defer(function()
 		new:Wait()
@@ -86,7 +82,7 @@ function module.Fast(obj: Instance | {} | Model, info: TweenInfo, action: {}): (
 	end)
 end
 
-function module.Wait(obj: Instance | {} | Model, info: TweenInfo, action: {}): ()
+function module.Wait(obj: Types.obj, info: TweenInfo, action: Types.action): ()
 	local new = module.new(obj, info, action)
 	new:Wait()
 	new:Destroy()
